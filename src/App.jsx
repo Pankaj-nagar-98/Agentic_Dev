@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Navbar from './components/Navbar';
 import LoginPage from './components/LoginPage';
 import TodoPage from './components/TodoPage';
+import Toast from './components/Toast';
 
 const USER_STORAGE_KEY = 'taskflow_user';
 
@@ -16,6 +17,12 @@ export default function App() {
     }
   });
 
+  const [toast, setToast] = useState(null);
+
+  const showToast = ({ message, type = 'info' }) => {
+    setToast({ message, type, id: Date.now() });
+  };
+
   const handleLogin = (userData) => {
     setUser(userData);
     try {
@@ -23,6 +30,7 @@ export default function App() {
     } catch (e) {
       console.error('Failed to save user to localStorage', e);
     }
+    showToast({ message: `Welcome back, ${userData.email}! 👋`, type: 'success' });
   };
 
   const handleLogout = () => {
@@ -32,6 +40,7 @@ export default function App() {
     } catch (e) {
       console.error('Failed to remove user from localStorage', e);
     }
+    showToast({ message: 'Signed out successfully', type: 'info' });
   };
 
   return (
@@ -42,9 +51,12 @@ export default function App() {
         {!user ? (
           <LoginPage onLogin={handleLogin} />
         ) : (
-          <TodoPage user={user} />
+          <TodoPage user={user} onShowToast={showToast} />
         )}
       </main>
+
+      {/* Global Toast Notification */}
+      <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }

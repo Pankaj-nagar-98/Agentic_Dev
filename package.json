@@ -1,7 +1,22 @@
 {
-  "name": "agentic-development",
+  "name": "taskflow-web",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "A modern, responsive Todo web application with mock authentication and browser local storage persistence.",
+  "author": "Pankaj Nagar",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Pankaj-nagar-98/Agentic_Dev.git"
+  },
+  "keywords": [
+    "react",
+    "todo",
+    "productivity",
+    "vite",
+    "modern-ui",
+    "task-management"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",
