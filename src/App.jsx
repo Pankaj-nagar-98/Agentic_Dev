@@ -4,9 +4,14 @@ import LoginPage from './components/LoginPage';
 import TodoPage from './components/TodoPage';
 import { TODOS_STORAGE_KEY, INITIAL_TODOS } from './utils/todoConstants';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
+import RepetitiveDashboard from './components/RepetitiveDashboard';
 import Toast from './components/Toast';
 import { exportToJSON, exportToCSV } from './utils/exportUtils';
 import { SESSIONS_STORAGE_KEY } from './utils/analyticsUtils';
+import {
+  REPETITIVE_STORAGE_KEY,
+  INITIAL_REPETITIVE_TASKS,
+} from './utils/repetitiveUtils';
 
 const USER_STORAGE_KEY = 'taskflow_user';
 const THEME_STORAGE_KEY = 'taskflow_theme';
@@ -109,7 +114,7 @@ export default function App() {
     }
   });
 
-  // View state: 'tasks' | 'analytics'
+  // View state: 'tasks' | 'daily' | 'analytics'
   const [activeView, setActiveView] = useState('tasks');
 
   // Shared Todos state
@@ -151,6 +156,59 @@ export default function App() {
       console.error('Failed to persist focus sessions', e);
     }
   }, [sessions]);
+
+  // Repetitive Tasks state
+  const [repetitiveTasks, setRepetitiveTasks] = useState(() => {
+    try {
+      const saved = localStorage.getItem(REPETITIVE_STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Failed to load repetitive tasks', e);
+    }
+    return INITIAL_REPETITIVE_TASKS;
+  });
+
+  // Save repetitive tasks on mutation
+  useEffect(() => {
+    try {
+      localStorage.setItem(REPETITIVE_STORAGE_KEY, JSON.stringify(repetitiveTasks));
+    } catch (e) {
+      console.error('Failed to persist repetitive tasks', e);
+    }
+  }, [repetitiveTasks]);
+
+  // Repetitive Task Handlers
+  const handleAddRepetitiveTask = useCallback((newTask) => {
+    setRepetitiveTasks((prev) => [newTask, ...prev]);
+  }, []);
+
+  const handleUpdateRepetitiveTask = useCallback((taskId, updates) => {
+    setRepetitiveTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
+    );
+  }, []);
+
+  const handleDeleteRepetitiveTask = useCallback((taskId) => {
+    setRepetitiveTasks((prev) => prev.filter((t) => t.id !== taskId));
+  }, []);
+
+  const handleUpdateRepetitiveLog = useCallback((taskId, dateKey, logEntry) => {
+    setRepetitiveTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === taskId) {
+          const updatedHistory = {
+            ...(t.history || {}),
+            [dateKey]: {
+              ...((t.history || {})[dateKey] || {}),
+              ...logEntry,
+            },
+          };
+          return { ...t, history: updatedHistory };
+        }
+        return t;
+      })
+    );
+  }, []);
 
   // Handle saving new focus session
   const handleSaveSession = useCallback((newSession) => {
@@ -238,6 +296,16 @@ export default function App() {
             sessions={sessions}
             onUpdateTask={handleUpdateTask}
             onSaveSession={handleSaveSession}
+            onBackToTasks={() => setActiveView('tasks')}
+            onShowToast={showToast}
+          />
+        ) : activeView === 'daily' ? (
+          <RepetitiveDashboard
+            tasks={repetitiveTasks}
+            onAddTask={handleAddRepetitiveTask}
+            onUpdateTask={handleUpdateRepetitiveTask}
+            onDeleteTask={handleDeleteRepetitiveTask}
+            onUpdateLog={handleUpdateRepetitiveLog}
             onBackToTasks={() => setActiveView('tasks')}
             onShowToast={showToast}
           />
