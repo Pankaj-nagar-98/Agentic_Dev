@@ -2,11 +2,75 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Navbar from './components/Navbar';
 import LoginPage from './components/LoginPage';
 import TodoPage from './components/TodoPage';
+import { TODOS_STORAGE_KEY, INITIAL_TODOS } from './utils/todoConstants';
+import AnalyticsDashboard from './components/AnalyticsDashboard';
 import Toast from './components/Toast';
 import { exportToJSON, exportToCSV } from './utils/exportUtils';
+import { SESSIONS_STORAGE_KEY } from './utils/analyticsUtils';
 
 const USER_STORAGE_KEY = 'taskflow_user';
 const THEME_STORAGE_KEY = 'taskflow_theme';
+
+const ONE_HOUR = 3600000;
+const ONE_DAY = 86400000;
+
+const INITIAL_DEMO_SESSIONS = [
+  {
+    id: 'sess_1',
+    taskId: '1',
+    taskTitle: 'Review Agentic AI workflow & architecture documentation',
+    category: 'Work',
+    startTime: Date.now() - ONE_DAY * 1 - ONE_HOUR * 3,
+    endTime: Date.now() - ONE_DAY * 1 - ONE_HOUR * 2.5,
+    durationSeconds: 1800,
+    type: 'pomodoro',
+    completedCycle: true,
+  },
+  {
+    id: 'sess_2',
+    taskId: '2',
+    taskTitle: 'Build modern TaskFlow React productivity suite',
+    category: 'Work',
+    startTime: Date.now() - ONE_DAY * 2 - ONE_HOUR * 5,
+    endTime: Date.now() - ONE_DAY * 2 - ONE_HOUR * 4.25,
+    durationSeconds: 2700,
+    type: 'pomodoro',
+    completedCycle: true,
+  },
+  {
+    id: 'sess_3',
+    taskId: '3',
+    taskTitle: 'Conduct weekly personal productivity and finance review',
+    category: 'Personal',
+    startTime: Date.now() - ONE_DAY * 3 - ONE_HOUR * 2,
+    endTime: Date.now() - ONE_DAY * 3 - ONE_HOUR * 1.5,
+    durationSeconds: 1800,
+    type: 'pomodoro',
+    completedCycle: true,
+  },
+  {
+    id: 'sess_4',
+    taskId: '2',
+    taskTitle: 'Build modern TaskFlow React productivity suite',
+    category: 'Work',
+    startTime: Date.now() - ONE_HOUR * 2,
+    endTime: Date.now() - ONE_HOUR * 1.5,
+    durationSeconds: 1800,
+    type: 'stopwatch',
+    completedCycle: false,
+  },
+  {
+    id: 'sess_5',
+    taskId: '4',
+    taskTitle: 'Study React 19 concurrent features & server components',
+    category: 'Study',
+    startTime: Date.now() - ONE_DAY * 4 - ONE_HOUR * 4,
+    endTime: Date.now() - ONE_DAY * 4 - ONE_HOUR * 3.33,
+    durationSeconds: 2400,
+    type: 'pomodoro',
+    completedCycle: true,
+  },
+];
 
 export default function App() {
   // Theme state
@@ -45,6 +109,61 @@ export default function App() {
     }
   });
 
+  // View state: 'tasks' | 'analytics'
+  const [activeView, setActiveView] = useState('tasks');
+
+  // Shared Todos state
+  const [todos, setTodos] = useState(() => {
+    try {
+      const saved = localStorage.getItem(TODOS_STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Failed to load todos from localStorage', e);
+    }
+    return INITIAL_TODOS;
+  });
+
+  // Save todos to localStorage on mutation
+  useEffect(() => {
+    try {
+      localStorage.setItem(TODOS_STORAGE_KEY, JSON.stringify(todos));
+    } catch (e) {
+      console.error('Failed to persist todos', e);
+    }
+  }, [todos]);
+
+  // Shared Focus Sessions state
+  const [sessions, setSessions] = useState(() => {
+    try {
+      const saved = localStorage.getItem(SESSIONS_STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Failed to load sessions from localStorage', e);
+    }
+    return INITIAL_DEMO_SESSIONS;
+  });
+
+  // Save sessions to localStorage on mutation
+  useEffect(() => {
+    try {
+      localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(sessions));
+    } catch (e) {
+      console.error('Failed to persist focus sessions', e);
+    }
+  }, [sessions]);
+
+  // Handle saving new focus session
+  const handleSaveSession = useCallback((newSession) => {
+    setSessions((prev) => [newSession, ...prev]);
+  }, []);
+
+  // Handle updating a task's analytics / focus fields
+  const handleUpdateTask = useCallback((taskId, updates) => {
+    setTodos((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
+    );
+  }, []);
+
   // Toast state
   const [toast, setToast] = useState(null);
 
@@ -75,25 +194,25 @@ export default function App() {
   // Export handlers
   const currentTodosRef = useRef([]);
 
-  const handleExportRequest = useCallback((todos) => {
-    currentTodosRef.current = todos;
+  const handleExportRequest = useCallback((currentList) => {
+    currentTodosRef.current = currentList;
   }, []);
 
   const handleExportJSON = () => {
-    if (currentTodosRef.current.length === 0) {
+    if (todos.length === 0) {
       showToast({ message: 'No tasks to export', type: 'alert' });
       return;
     }
-    exportToJSON(currentTodosRef.current);
+    exportToJSON(todos);
     showToast({ message: 'JSON backup downloaded! 📁', type: 'success' });
   };
 
   const handleExportCSV = () => {
-    if (currentTodosRef.current.length === 0) {
+    if (todos.length === 0) {
       showToast({ message: 'No tasks to export', type: 'alert' });
       return;
     }
-    exportToCSV(currentTodosRef.current);
+    exportToCSV(todos);
     showToast({ message: 'CSV spreadsheet downloaded! 📊', type: 'success' });
   };
 
@@ -106,16 +225,31 @@ export default function App() {
         onToggleTheme={toggleTheme}
         onExportJSON={handleExportJSON}
         onExportCSV={handleExportCSV}
+        activeView={activeView}
+        onSelectView={setActiveView}
       />
 
       <main className="main-content">
         {!user ? (
           <LoginPage onLogin={handleLogin} />
+        ) : activeView === 'analytics' ? (
+          <AnalyticsDashboard
+            tasks={todos}
+            sessions={sessions}
+            onUpdateTask={handleUpdateTask}
+            onSaveSession={handleSaveSession}
+            onBackToTasks={() => setActiveView('tasks')}
+            onShowToast={showToast}
+          />
         ) : (
           <TodoPage
             user={user}
             onShowToast={showToast}
             onExportRequest={handleExportRequest}
+            todos={todos}
+            setTodos={setTodos}
+            onSaveSession={handleSaveSession}
+            onNavigateToAnalytics={() => setActiveView('analytics')}
           />
         )}
       </main>

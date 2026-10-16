@@ -3,66 +3,25 @@ import TodoItem from './TodoItem';
 import TodoFilter from './TodoFilter';
 import ProgressBar from './ProgressBar';
 import TaskModal from './TaskModal';
+import FocusTimer from './FocusTimer';
+import {
+  TODOS_STORAGE_KEY,
+  CATEGORIES_STORAGE_KEY,
+  INITIAL_CATEGORIES,
+  INITIAL_TODOS,
+} from '../utils/todoConstants';
 
-const TODOS_STORAGE_KEY = 'taskflow_todos';
-const CATEGORIES_STORAGE_KEY = 'taskflow_categories';
-
-const INITIAL_CATEGORIES = ['Work', 'Personal', 'Study', 'Health', 'Finance'];
-
-const INITIAL_TODOS = [
-  {
-    id: '1',
-    title: 'Review Agentic AI workflow & architecture documentation',
-    text: 'Review Agentic AI workflow & architecture documentation',
-    description: 'Ensure prompt engineering, state management, and tool integration align with requirements.',
-    completed: true,
-    archived: false,
-    priority: 'high',
-    category: 'Work',
-    dueDate: '2026-10-20',
-    createdAt: Date.now() - 3600000 * 3,
-    subtasks: [
-      { id: 'st-1', title: 'Check subagent flow', completed: true },
-      { id: 'st-2', title: 'Verify tool declarations', completed: true },
-    ],
-  },
-  {
-    id: '2',
-    title: 'Build modern TaskFlow React productivity suite',
-    text: 'Build modern TaskFlow React productivity suite',
-    description: 'Implement dark/light themes, subtasks, search, and CSV/JSON export.',
-    completed: true,
-    archived: false,
-    priority: 'medium',
-    category: 'Work',
-    dueDate: '2026-10-22',
-    createdAt: Date.now() - 3600000 * 2,
-    subtasks: [
-      { id: 'st-3', title: 'Theme system in CSS', completed: true },
-      { id: 'st-4', title: 'Interactive task modal', completed: true },
-    ],
-  },
-  {
-    id: '3',
-    title: 'Conduct weekly personal productivity and finance review',
-    text: 'Conduct weekly personal productivity and finance review',
-    description: 'Organize budget expenses and update learning milestones.',
-    completed: false,
-    archived: false,
-    priority: 'low',
-    category: 'Personal',
-    dueDate: '2026-10-25',
-    createdAt: Date.now() - 1800000,
-    subtasks: [
-      { id: 'st-5', title: 'Review savings account', completed: false },
-      { id: 'st-6', title: 'Plan weekend goals', completed: false },
-    ],
-  },
-];
-
-export default function TodoPage({ user, onShowToast, onExportRequest }) {
-  // Load Todos
-  const [todos, setTodos] = useState(() => {
+export default function TodoPage({
+  user,
+  onShowToast,
+  onExportRequest,
+  todos: externalTodos,
+  setTodos: externalSetTodos,
+  onSaveSession,
+  onNavigateToAnalytics,
+}) {
+  // Load Todos (external or internal fallback)
+  const [internalTodos, setInternalTodos] = useState(() => {
     try {
       const saved = localStorage.getItem(TODOS_STORAGE_KEY);
       if (saved) {
@@ -73,6 +32,11 @@ export default function TodoPage({ user, onShowToast, onExportRequest }) {
     }
     return INITIAL_TODOS;
   });
+
+  const todos = externalTodos || internalTodos;
+  const setTodos = externalSetTodos || setInternalTodos;
+
+  const [focusTask, setFocusTask] = useState(null);
 
   // Load Custom Categories
   const [categories, setCategories] = useState(() => {
@@ -231,10 +195,16 @@ export default function TodoPage({ user, onShowToast, onExportRequest }) {
       todos.map((t) => {
         if (t.id === id) {
           const updatedState = !t.completed;
+          const completedAt = updatedState ? Date.now() : null;
           if (updatedState) {
             onShowToast?.({ message: 'Task completed! 🎉', type: 'info' });
           }
-          return { ...t, completed: updatedState };
+          return {
+            ...t,
+            completed: updatedState,
+            completedAt,
+            status: updatedState ? 'completed' : 'todo',
+          };
         }
         return t;
       })
@@ -381,6 +351,22 @@ export default function TodoPage({ user, onShowToast, onExportRequest }) {
         </div>
 
         <div className="todo-header-actions">
+          {onNavigateToAnalytics && (
+            <button
+              type="button"
+              className="btn-analytics-trigger"
+              onClick={onNavigateToAnalytics}
+              title="Open Productivity Analytics Dashboard"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"/>
+                <line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6" y1="20" x2="6" y2="14"/>
+              </svg>
+              <span>Analytics</span>
+            </button>
+          )}
+
           <button
             type="button"
             className="btn-create-modal-trigger"
@@ -484,6 +470,7 @@ export default function TodoPage({ user, onShowToast, onExportRequest }) {
                 onEdit={handleOpenEdit}
                 onArchive={handleArchive}
                 onToggleSubtask={handleToggleSubtask}
+                onStartFocus={setFocusTask}
               />
             ))
           ) : (
@@ -545,6 +532,23 @@ export default function TodoPage({ user, onShowToast, onExportRequest }) {
           availableCategories={categories}
           onAddCategory={handleAddCategory}
         />
+      )}
+
+      {/* Focus Timer Modal */}
+      {focusTask && (
+        <div className="modal-backdrop" onClick={() => setFocusTask(null)}>
+          <div className="focus-modal-wrapper" onClick={(e) => e.stopPropagation()}>
+            <FocusTimer
+              task={focusTask}
+              onUpdateTask={(taskId, updates) => {
+                setTodos(todos.map((t) => (t.id === taskId ? { ...t, ...updates } : t)));
+              }}
+              onSaveSession={onSaveSession}
+              onClose={() => setFocusTask(null)}
+              onShowToast={onShowToast}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

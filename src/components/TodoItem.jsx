@@ -7,6 +7,7 @@ export default function TodoItem({
   onEdit,
   onArchive,
   onToggleSubtask,
+  onStartFocus,
 }) {
   const [showSubtasks, setShowSubtasks] = useState(false);
 
@@ -77,6 +78,16 @@ export default function TodoItem({
                   <span>{dueInfo.text}</span>
                 </span>
               )}
+
+              {todo.totalFocusSeconds > 0 && (
+                <span className="focus-time-badge" title="Tracked focus time">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  <span>{Math.round(todo.totalFocusSeconds / 60)}m</span>
+                </span>
+              )}
             </div>
           </div>
 
@@ -124,6 +135,20 @@ export default function TodoItem({
 
         {/* Action Buttons */}
         <div className="todo-item-actions">
+          {/* Focus Timer Button */}
+          <button
+            type="button"
+            className="btn-item-action btn-focus-trigger"
+            onClick={() => onStartFocus(todo)}
+            title="Start focus timer on this task"
+            aria-label="Focus timer"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </button>
+
           {/* Edit button */}
           <button
             type="button"
