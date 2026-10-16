@@ -19,9 +19,10 @@ export default function App() {
     }
   });
 
-  // Apply theme to document element
+  // Apply theme to document element and body
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    document.body.setAttribute('data-theme', theme);
     try {
       localStorage.setItem(THEME_STORAGE_KEY, theme);
     } catch (e) {

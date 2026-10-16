@@ -1,23 +1,25 @@
 import React from 'react';
 
 export default function TodoFilter({
-  currentFilter,
+  currentFilter = 'all',
   onFilterChange,
-  counts,
-  searchQuery,
+  counts = { all: 0, active: 0, completed: 0, archived: 0 },
+  searchQuery = '',
   onSearchChange,
-  sortBy,
+  sortBy = 'created_desc',
   onSortChange,
-  selectedCategory,
+  selectedCategory = 'all',
   onCategoryChange,
-  availableCategories,
-  remainingCount,
+  availableCategories = [],
+  remainingCount = 0,
 }) {
+  const safeCategories = Array.isArray(availableCategories) ? availableCategories : [];
+
   const statusTabs = [
-    { key: 'all', label: 'All', count: counts.all },
-    { key: 'active', label: 'Active', count: counts.active },
-    { key: 'completed', label: 'Completed', count: counts.completed },
-    { key: 'archived', label: 'Archived', count: counts.archived },
+    { key: 'all', label: 'All', count: counts.all ?? 0 },
+    { key: 'active', label: 'Active', count: counts.active ?? 0 },
+    { key: 'completed', label: 'Completed', count: counts.completed ?? 0 },
+    { key: 'archived', label: 'Archived', count: counts.archived ?? 0 },
   ];
 
   return (
@@ -36,13 +38,13 @@ export default function TodoFilter({
             className="search-input"
             placeholder="Search tasks, descriptions, or tags... (Press / to focus)"
             value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
+            onChange={(e) => onSearchChange?.(e.target.value)}
           />
           {searchQuery && (
             <button
               type="button"
               className="btn-clear-search"
-              onClick={() => onSearchChange('')}
+              onClick={() => onSearchChange?.('')}
               title="Clear search"
             >
               &times;
@@ -57,7 +59,7 @@ export default function TodoFilter({
             id="sort-tasks-select"
             className="sort-select"
             value={sortBy}
-            onChange={(e) => onSortChange(e.target.value)}
+            onChange={(e) => onSortChange?.(e.target.value)}
           >
             <option value="created_desc">Newest First</option>
             <option value="created_asc">Oldest First</option>
@@ -74,16 +76,16 @@ export default function TodoFilter({
           <button
             type="button"
             className={`category-pill-btn ${selectedCategory === 'all' ? 'active' : ''}`}
-            onClick={() => onCategoryChange('all')}
+            onClick={() => onCategoryChange?.('all')}
           >
             All Categories
           </button>
-          {availableCategories.map((cat) => (
+          {safeCategories.map((cat) => (
             <button
               key={cat}
               type="button"
               className={`category-pill-btn ${selectedCategory === cat ? 'active' : ''}`}
-              onClick={() => onCategoryChange(cat)}
+              onClick={() => onCategoryChange?.(cat)}
             >
               {cat}
             </button>
@@ -99,7 +101,7 @@ export default function TodoFilter({
               key={tab.key}
               type="button"
               className={`filter-btn ${currentFilter === tab.key ? 'active' : ''}`}
-              onClick={() => onFilterChange(tab.key)}
+              onClick={() => onFilterChange?.(tab.key)}
             >
               <span>{tab.label}</span>
               <span className="filter-count">{tab.count}</span>
